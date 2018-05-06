@@ -1,60 +1,92 @@
 def update_quality(items)
-  items.each do |item|
-    if item.name != 'Aged Brie' && item.name != 'Backstage passes to a TAFKAL80ETC concert'
-      if item.quality > 0
-        if item.name != 'Sulfuras, Hand of Ragnaros'
-          item.quality -= 1
-          if item.quality > 0 && item.name.start_with?('Conjured')
-            item.quality -= 1
-          end
-        end
-      end
-    else
-      if item.quality < 50
-        item.quality += 1
-        if item.name == 'Backstage passes to a TAFKAL80ETC concert'
-          if item.sell_in < 11
-            if item.quality < 50
-              item.quality += 1
-            end
-          end
-          if item.sell_in < 6
-            if item.quality < 50
-              item.quality += 1
-            end
-          end
-        end
-      end
-    end
-    if item.name != 'Sulfuras, Hand of Ragnaros'
-      item.sell_in -= 1
-    end
-    if item.sell_in < 0
-      if item.name != "Aged Brie"
-        if item.name != 'Backstage passes to a TAFKAL80ETC concert'
-          if item.quality > 0
-            if item.name != 'Sulfuras, Hand of Ragnaros'
-              item.quality -= 1 
-              if item.quality > 0 && item.name.start_with?('Conjured')
-                item.quality -= 1
-              end
-            end
-          end
-        else
-          item.quality = item.quality - item.quality
-        end
-      else
-        if item.quality < 50
-          item.quality += 1
-        end
-      end
-    end
+  items.each(&:update_quality)
+end
+
+module LegendaryQualityUpdater
+  def self.run(item)
+    item.quality = 80
   end
 end
 
-# DO NOT CHANGE THINGS BELOW -----------------------------------------
+module ConjuredQualityUpdater
+  def self.run(item)
+    item.quality -= 2
+    item.quality -= 2 if item.sell_date_hit?
+  end
+end
 
-Item = Struct.new(:name, :sell_in, :quality)
+module AgedBrieQualityUpdater
+  def self.run(item)
+    item.quality += 1
+    item.quality += 1 if item.sell_date_hit?
+  end
+end
+
+module StandardQualityUpdater
+  def self.run(item)
+    item.quality -= 1
+    item.quality -= 1 if item.sell_date_hit?
+  end
+end
+
+module BackstagePassQualityUpdater
+  def self.run(item)
+    item.quality += 1
+    item.quality += 1 if item.sell_in < 11
+    item.quality += 1 if item.sell_in < 6
+    item.quality = 0 if item.sell_date_hit?
+  end
+end
+
+class Item
+  attr_reader :name
+  attr_reader :quality
+  attr_reader :sell_in
+
+  def initialize(name, sell_in, quality)
+    @name = name
+    @sell_in = sell_in
+    @quality = quality
+    @quality_updater =
+      case name
+      when 'Sulfuras, Hand of Ragnaros'
+        LegendaryQualityUpdater
+      when 'Aged Brie'
+        AgedBrieQualityUpdater
+      when 'Backstage passes to a TAFKAL80ETC concert'
+        BackstagePassQualityUpdater
+      when 'Conjured Mana Cake'
+        ConjuredQualityUpdater
+      else
+        StandardQualityUpdater
+      end
+    @legendary = (name == 'Sulfuras, Hand of Ragnaros')
+  end
+
+  def update_quality
+    @quality_updater.run(self)
+    @sell_in -= 1 unless @legendary
+  end
+
+  def sell_date_hit?
+    sell_in <= 0
+  end
+
+  def quality=(quality)
+    @quality = [quality, minimum_quality].max
+    @quality = [@quality, maximum_quality].min
+  end
+
+  private
+
+  def maximum_quality
+    @legendary ? 80 : 50
+  end
+
+  def minimum_quality
+    0
+  end
+end
 
 # We use the setup in the spec rather than the following for testing.
 #
