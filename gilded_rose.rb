@@ -4,6 +4,9 @@ def update_quality(items)
       if item.quality > 0
         if item.name != 'Sulfuras, Hand of Ragnaros'
           item.quality -= 1
+          if item.quality > 0 && item.name.start_with?('Conjured')
+            item.quality -= 1
+          end
         end
       end
     else
@@ -31,7 +34,10 @@ def update_quality(items)
         if item.name != 'Backstage passes to a TAFKAL80ETC concert'
           if item.quality > 0
             if item.name != 'Sulfuras, Hand of Ragnaros'
-              item.quality -= 1
+              item.quality -= 1 
+              if item.quality > 0 && item.name.start_with?('Conjured')
+                item.quality -= 1
+              end
             end
           end
         else
